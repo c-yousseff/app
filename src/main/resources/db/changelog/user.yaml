@@ -1,0 +1,264 @@
+databaseChangeLog:
+  - property:
+      name: autoIncrement
+      value: true
+
+  # App core tables.
+  # The initial schema has the '00000000000001' id, so that it is over-written if we re-generate it.
+
+  - changeSet:
+      id: "00000000000001"
+      author: "App"
+      changes:
+        - createTable:
+            tableName: user
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: "${autoIncrement}"
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: login
+                  type: varchar(50)
+                  constraints:
+                    unique: true
+                    nullable: false
+                    uniqueConstraintName: ux_user_login
+              - column:
+                  name: password_hash
+                  type: varchar(60)
+              - column:
+                  name: first_name
+                  type: varchar(50)
+              - column:
+                  name: last_name
+                  type: varchar(50)
+              - column:
+                  name: email
+                  type: varchar(191)
+                  constraints:
+                    unique: true
+                    nullable: true
+                    uniqueConstraintName: ux_user_email
+              - column:
+                  name: image_url
+                  type: varchar(256)
+              - column:
+                  name: activated
+                  type: boolean
+                  valueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: lang_key
+                  type: varchar(6)
+              - column:
+                  name: activation_key
+                  type: varchar(20)
+              - column:
+                  name: reset_key
+                  type: varchar(20)
+              - column:
+                  name: created_by
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_date
+                  type: timestamp
+              - column:
+                  name: reset_date
+                  type: timestamp
+                  constraints:
+                    nullable: true
+              - column:
+                  name: last_modified_by
+                  type: varchar(50)
+              - column:
+                  name: last_modified_date
+                  type: timestamp
+
+        - createTable:
+            tableName: authority
+            columns:
+              - column:
+                  name: name
+                  type: varchar(50)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+
+        - createTable:
+            tableName: user_authority
+            columns:
+              - column:
+                  name: user_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: authority_name
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+
+        - addPrimaryKey:
+            tableName: user_authority
+            columnNames: "user_id, authority_name"
+
+        - addForeignKeyConstraint:
+            baseTableName: user_authority
+            baseColumnNames: authority_name
+            constraintName: fk_authority_name
+            referencedTableName: authority
+            referencedColumnNames: name
+
+        - addForeignKeyConstraint:
+            baseTableName: user_authority
+            baseColumnNames: user_id
+            constraintName: fk_user_id
+            referencedTableName: user
+            referencedColumnNames: id
+
+        - addNotNullConstraint:
+            tableName: user
+            columnName: password_hash
+            columnDataType: varchar(60)
+
+        - loadData:
+            encoding: UTF-8
+            file: db/fakedata/users.csv
+            separator: ";"
+            tableName: user
+            columns:
+              - column:
+                  name: activated
+                  type: boolean
+              - column:
+                  name: created_date
+                  type: timestamp
+
+        - dropDefaultValue:
+            tableName: user
+            columnName: created_date
+            columnDataType: datetime
+
+        - loadData:
+            encoding: UTF-8
+            file: db/fakedata/authorities.csv
+            separator: ";"
+            tableName: authority
+
+        - loadData:
+            encoding: UTF-8
+            file: db/fakedata/users_authorities.csv
+            separator: ";"
+            tableName: user_authority
+
+        - createTable:
+            tableName: persistent_audit_event
+            columns:
+              - column:
+                  name: event_id
+                  type: bigint
+                  autoIncrement: "${autoIncrement}"
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: principal
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: event_date
+                  type: timestamp
+              - column:
+                  name: event_type
+                  type: varchar(255)
+
+        - createTable:
+            tableName: persistent_audit_evt_data
+            columns:
+              - column:
+                  name: event_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: name
+                  type: varchar(150)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: value
+                  type: varchar(255)
+
+        - addPrimaryKey:
+            tableName: persistent_audit_evt_data
+            columnNames: "event_id, name"
+
+        - createIndex:
+            indexName: idx_persistent_audit_event
+            tableName: persistent_audit_event
+            unique: false
+            columns:
+              - column:
+                  name: principal
+              - column:
+                  name: event_date
+
+        - createIndex:
+            indexName: idx_persistent_audit_evt_data
+            tableName: persistent_audit_evt_data
+            unique: false
+            columns:
+              - column:
+                  name: event_id
+
+        - addForeignKeyConstraint:
+            baseTableName: persistent_audit_evt_data
+            baseColumnNames: event_id
+            constraintName: fk_evt_pers_audit_evt_data
+            referencedTableName: persistent_audit_event
+            referencedColumnNames: event_id
+
+  - changeSet:
+      id: "00000000000002"
+      author: "App"
+      context: test
+      changes:
+        - createTable:
+            tableName: date_time_wrapper
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: "${autoIncrement}"
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: date_time_wrapperPK
+              - column:
+                  name: instant
+                  type: timestamp
+              - column:
+                  name: local_date_time
+                  type: timestamp
+              - column:
+                  name: offset_date_time
+                  type: timestamp
+              - column:
+                  name: zoned_date_time
+                  type: timestamp
+              - column:
+                  name: local_time
+                  type: time
+              - column:
+                  name: offset_time
+                  type: time
+              - column:
+                  name: local_date
+                  type: date
